@@ -18,9 +18,12 @@ let jadwalAlternatif = {};
 //read: buka pemesanan dengan kode booking dan nama belakang
 async function bukaBooking(kode, namaBelakang) {
   const snap = await get(ref(db, `bookings/${kode}`));
+  if (!snap.exists()) throw new Error("Kode booking tidak ditemukan. Periksa 6 karakter kodenya.");
+  const b = snap.val();
   if (namaBelakang !== null) {
     const tersimpan = b.penumpang.namaBelakang.trim().toLowerCase();
     const diketik = namaBelakang.trim().toLowerCase();
+    // cocok jika sama persis, atau sama dengan kata terakhir nama belakang
     const cocok = tersimpan === diketik || tersimpan.split(/\s+/).pop() === diketik;
     if (!cocok) throw new Error("Nama belakang tidak cocok dengan kode booking ini.");
   }
