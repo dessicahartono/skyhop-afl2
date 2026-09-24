@@ -145,9 +145,10 @@ async function siapkanFormPesan() {
   if (s) {
     const m = (await get(ref(db, `members/${s.id}`))).val();
     if (m) {
-      const [depan, ...belakang] = m.nama.split(" ");
-      $("namaDepan").value = depan;
-      $("namaBelakang").value = belakang.join(" ") || depan;
+      const kata = m.nama.trim().split(/\s+/);
+      const belakang = kata.length > 1 ? kata.pop() : kata[0];
+      $("namaDepan").value = kata.join(" ");
+      $("namaBelakang").value = belakang;
       $("emailP").value = m.email;
       $("teleponP").value = m.telepon;
     }
