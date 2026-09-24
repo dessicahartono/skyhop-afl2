@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>skyhop – SkyHop Club</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main class="container py-5">
+    <h1 class="display-5 fw-bold mb-1">SkyHop Club</h1>
+    <p class="mb-4">Daftar gratis untuk menyimpan data penumpang, kartu pembayaran, dan riwayat pemesananmu.</p>
+    <div id="alertAnggota"></div>
+
+    <div class="row g-4">
+      <!-- create: pendaftaran akun baru -->
+      <div class="col-lg-7">
+        <section class="panel">
+          <h2 class="panel-judul">Daftar akun baru</h2>
+          <form id="formDaftar" class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="nama">Nama lengkap (sesuai paspor)</label>
+              <input class="form-control" id="nama" required minlength="3">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="email">Email</label>
+              <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="password">Kata sandi</label>
+              <input type="password" class="form-control" id="password" required minlength="6">
+              <div class="form-text">Minimal 6 karakter.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="telepon">Nomor telepon</label>
+              <input type="tel" class="form-control" id="telepon" pattern="[0-9+ ]{8,16}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tglLahir">Tanggal lahir</label>
+              <input type="date" class="form-control" id="tglLahir" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="kewarganegaraan">Kewarganegaraan</label>
+              <select class="form-select" id="kewarganegaraan" required>
+                <option>Indonesia</option><option>Singapura</option><option>Malaysia</option>
+                <option>Thailand</option><option>Lainnya</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="gender">Jenis kelamin</label>
+              <select class="form-select" id="gender" required>
+                <option value="L">Laki-laki</option><option value="P">Perempuan</option>
+              </select>
+            </div>
+            <div class="col-12 form-check ms-2">
+              <input type="checkbox" class="form-check-input" id="setuju" required>
+              <label class="form-check-label" for="setuju">Saya setuju dengan syarat dan kebijakan privasi SkyHop.</label>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-kuning btn-lg" id="btnDaftar">Buat akun</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- read: masuk akun -->
+      <div class="col-lg-5">
+        <section class="panel">
+          <h2 class="panel-judul">Sudah punya akun?</h2>
+          <form id="formMasuk" class="d-grid gap-3">
+            <div>
+              <label class="form-label" for="emailMasuk">Email</label>
+              <input type="email" class="form-control" id="emailMasuk" required>
+            </div>
+            <div>
+              <label class="form-label" for="passwordMasuk">Kata sandi</label>
+              <input type="password" class="form-control" id="passwordMasuk" required>
+            </div>
+            <button class="btn btn-ink btn-lg" id="btnMasuk">Masuk</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="js/anggota.js"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>skyhop – Kelola pemesanan</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main class="container py-5">
+    <h1 class="display-5 fw-bold mb-1">Kelola pemesanan</h1>
+    <p class="mb-4">Lihat tiket, ganti jadwal, pilih kursi, tambah bagasi, atau batalkan pemesanan.</p>
+
+    <!-- read: cari booking -->
+    <section class="panel mb-4">
+      <form id="formCariBooking" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label" for="kodeBooking">Kode booking</label>
+          <input class="form-control text-uppercase" id="kodeBooking" maxlength="6" minlength="6" required placeholder="mis. K7XQ2M">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label" for="namaBelakangCari">Nama belakang penumpang</label>
+          <input class="form-control" id="namaBelakangCari" required>
+        </div>
+        <div class="col-md-3 d-grid">
+          <button class="btn btn-kuning btn-lg" id="btnCariBooking">Buka pemesanan</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="alertKelola"></div>
+
+    <div class="row g-4 d-none" id="areaBooking">
+      <div class="col-lg-5">
+        <article class="tiket" id="tiket"></article>
+      </div>
+
+      <div class="col-lg-7">
+        <section class="panel">
+          <ul class="nav nav-pills mb-3 gap-1" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabJadwal" type="button">Ganti jadwal</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabKursi" type="button">Ubah kursi</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabBagasi" type="button">Tambah bagasi</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabBatal" type="button">Batalkan</button></li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- update: reschedule -->
+            <div class="tab-pane fade show active" id="tabJadwal">
+              <form id="formJadwal" class="d-grid gap-3">
+                <div>
+                  <label class="form-label" for="pilihJadwal">Penerbangan pengganti (rute sama)</label>
+                  <select class="form-select" id="pilihJadwal" required></select>
+                </div>
+                <p class="small mb-0" id="infoSelisih"></p>
+                <button class="btn btn-kuning" id="btnJadwal">Ganti jadwal</button>
+              </form>
+            </div>
+
+            <!-- update: kursi -->
+            <div class="tab-pane fade" id="tabKursi">
+              <form id="formKursi" class="d-grid gap-3">
+                <div>
+                  <label class="form-label" for="pilihKursi">Nomor kursi baru</label>
+                  <select class="form-select" id="pilihKursi"></select>
+                </div>
+                <button class="btn btn-kuning" id="btnKursi">Simpan kursi</button>
+              </form>
+            </div>
+
+            <!-- update: bagasi -->
+            <div class="tab-pane fade" id="tabBagasi">
+              <form id="formBagasi" class="d-grid gap-3">
+                <div>
+                  <label class="form-label" for="pilihBagasi">Paket bagasi tercatat</label>
+                  <select class="form-select" id="pilihBagasi"></select>
+                  <div class="form-text">Bagasi hanya bisa ditambah, tidak bisa dikurangi.</div>
+                </div>
+                <button class="btn btn-kuning" id="btnBagasi">Simpan bagasi</button>
+              </form>
+            </div>
+
+            <!-- delete: batalkan pemesanan -->
+            <div class="tab-pane fade" id="tabBatal">
+              <form id="formBatal" class="d-grid gap-3">
+                <p class="mb-0">Pembatalan bisa dilakukan paling lambat satu hari sebelum keberangkatan.
+                  Data pemesanan akan dihapus dan kursi dikembalikan ke penerbangan.</p>
+                <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="setujuBatal" required>
+                  <label class="form-check-label" for="setujuBatal">Saya paham pemesanan ini tidak bisa dipulihkan.</label>
+                </div>
+                <button class="btn btn-danger" id="btnBatal">Batalkan pemesanan</button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="js/kelola.js"></script>
+</body>
+</html>

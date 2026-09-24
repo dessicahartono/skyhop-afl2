@@ -1,0 +1,97 @@
+:root {
+  --kuning: #FFE500;
+  --kuning-tua: #F2C800;
+  --tinta: #1D1D1B;
+  --abu: #F4F4EF;
+  --garis: #E2E0D6;
+  --merah: #C8102E;
+}
+
+body {
+  font-family: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--tinta);
+  background: var(--abu);
+}
+
+h1, h2, h3, h4, h5, .logo, .display-font {
+  font-family: "Baloo 2", "Nunito Sans", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/*navbar*/
+.brand-nav { background: var(--kuning); padding: .75rem 0; }
+.brand-nav .logo { font-size: 2.1rem; font-weight: 800; line-height: 1; color: var(--tinta); }
+.brand-nav .nav-link { color: var(--tinta); font-weight: 700; }
+.brand-nav .nav-link.active { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 3px; }
+
+/*tombol*/
+.btn-ink { background: var(--tinta); color: var(--kuning); font-weight: 700; border-radius: 999px; padding-inline: 1.25rem; }
+.btn-ink:hover, .btn-ink:focus { background: #000; color: var(--kuning); }
+.btn-kuning { background: var(--kuning); color: var(--tinta); font-weight: 800; border-radius: 999px; border: 2px solid var(--tinta); }
+.btn-kuning:hover, .btn-kuning:focus { background: var(--kuning-tua); color: var(--tinta); }
+.btn:focus-visible, .form-control:focus, .form-select:focus {
+  outline: 3px solid var(--tinta); outline-offset: 2px; box-shadow: none; border-color: var(--tinta);
+}
+
+/*hero*/
+.hero { background: var(--kuning); padding: 3rem 0 7rem; overflow: hidden; }
+.hero h1 {
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-weight: 800;
+  line-height: .9;
+  text-transform: lowercase;
+  max-width: 11ch;
+}
+.hero p { font-size: 1.15rem; max-width: 38ch; }
+
+.panel-cari {
+  background: #fff;
+  border: 2px solid var(--tinta);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  margin-top: -4.5rem;
+  position: relative;
+}
+
+/*kartu dan panel*/
+.panel { background: #fff; border-radius: 1rem; border: 1px solid var(--garis); padding: 1.5rem; }
+.panel-judul { font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; }
+.form-label { font-weight: 700; font-size: .9rem; }
+.form-control, .form-select { border-radius: .6rem; border-color: #cfccc0; }
+
+.hasil-penerbangan { border: 1px solid var(--garis); border-radius: 1rem; background: #fff; padding: 1.1rem 1.25rem; }
+.hasil-penerbangan .jam { font-family: "Baloo 2", sans-serif; font-size: 1.75rem; font-weight: 800; line-height: 1; }
+.hasil-penerbangan .garis-rute { flex: 1; border-top: 2px dashed #bbb; margin: 0 .75rem; position: relative; top: .1rem; }
+.hasil-penerbangan .harga { font-family: "Baloo 2", sans-serif; font-size: 1.4rem; font-weight: 800; }
+
+.tiket {
+  background: #fff;
+  border-radius: 1rem;
+  border: 2px solid var(--tinta);
+  overflow: hidden;
+}
+.tiket-atas { background: var(--kuning); padding: 1.25rem 1.5rem; border-bottom: 2px dashed var(--tinta); }
+.tiket-kode { font-family: "Baloo 2", sans-serif; font-size: 2.25rem; font-weight: 800; line-height: 1; letter-spacing: .08em; }
+.tiket-isi { padding: 1.25rem 1.5rem; }
+.tiket-isi dt { font-weight: 600; font-size: .85rem; color: #666; }
+.tiket-isi dd { font-weight: 700; margin-bottom: .75rem; }
+
+.badge-status { background: var(--tinta); color: var(--kuning); border-radius: 999px; padding: .35rem .8rem; font-weight: 700; font-size: .8rem; }
+
+.zona-bahaya { border: 2px solid var(--merah); }
+.zona-bahaya .panel-judul { color: var(--merah); }
+
+.nav-pills .nav-link { color: var(--tinta); font-weight: 700; border-radius: 999px; }
+.nav-pills .nav-link.active { background: var(--tinta); color: var(--kuning); }
+
+.kosong { text-align: center; padding: 2rem 1rem; color: #666; }
+
+footer { background: var(--tinta); color: #cfcfc7; padding: 2rem 0; margin-top: 4rem; }
+footer .logo { color: var(--kuning); font-size: 1.6rem; font-weight: 800; }
+
+.indikator-live { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 700; color: #2d7a3a; }
+.indikator-live::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: #2fb344; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

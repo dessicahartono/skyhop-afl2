@@ -1,0 +1,9 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "members":  { ".indexOn": ["email"] },
+    "flights":  { ".indexOn": ["rute"] },
+    "bookings": { ".indexOn": ["flightId"] }
+  }
+}

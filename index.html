@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>skyhop – Cari penerbangan</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <header class="hero">
+    <div class="container">
+      <h2 class="display-4">Cari penerbangan, pesan tiketmu dalam satu menit</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- read: form pencarian jadwal penerbangan -->
+    <section class="panel-cari">
+      <form id="formCari" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label for="asal" class="form-label">Dari</label>
+          <select id="asal" class="form-select" required></select>
+        </div>
+        <div class="col-md-3">
+          <label for="tujuan" class="form-label">Ke</label>
+          <select id="tujuan" class="form-select" required></select>
+        </div>
+        <div class="col-md-3">
+          <label for="tanggal" class="form-label">Tanggal berangkat</label>
+          <input type="date" id="tanggal" class="form-control" required>
+        </div>
+        <div class="col-md-3 d-grid">
+          <button type="submit" class="btn btn-kuning btn-lg" id="btnCari">Cari penerbangan</button>
+        </div>
+      </form>
+      <p class="small text-muted mt-3 mb-0" id="infoSeed"></p>
+    </section>
+
+    <section class="mt-4">
+      <div id="alertCari"></div>
+      <div id="hasilCari" class="d-grid gap-3"></div>
+    </section>
+  </main>
+
+  <!-- create: modal pemesanan tiket -->
+  <div class="modal fade" id="modalPesan" tabindex="-1" aria-labelledby="judulPesan" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h4" id="judulPesan">Pesan tiket</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body" id="bodyPesan">
+          <div id="alertPesan"></div>
+          <div class="p-3 rounded-3 mb-3" style="background:var(--abu)" id="ringkasanFlight"></div>
+          <form id="formPesan" class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="namaDepan">Nama depan</label>
+              <input class="form-control" id="namaDepan" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="namaBelakang">Nama belakang</label>
+              <input class="form-control" id="namaBelakang" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="emailP">Email</label>
+              <input type="email" class="form-control" id="emailP" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="teleponP">Nomor telepon</label>
+              <input type="tel" class="form-control" id="teleponP" pattern="[0-9+ ]{8,16}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="paspor">Nomor paspor</label>
+              <input class="form-control" id="paspor" pattern="[A-Za-z0-9]{6,12}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="kursiP">Kursi</label>
+              <select class="form-select" id="kursiP"></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="bagasiP">Bagasi tercatat</label>
+              <select class="form-select" id="bagasiP"></select>
+            </div>
+            <div class="col-12 d-flex justify-content-between align-items-center border-top pt-3">
+              <div>Total bayar<br><strong class="fs-4 display-font" id="totalP">Rp 0</strong></div>
+              <button type="submit" class="btn btn-kuning btn-lg" id="btnPesan">Pesan sekarang</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container d-flex flex-wrap justify-content-between gap-2">
+      <span class="logo">skyhop</span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="js/index.js"></script>
+</body>
+</html>
