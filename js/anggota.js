@@ -14,6 +14,15 @@ const $ = (id) => document.getElementById(id);
 //kalau sudah login, tidak perlu daftar/masuk lagi
 authSiap.then((user) => { if (user) location.href = "akun.html"; });
 
+//huruf pertama setiap kata di nama otomatis jadi kapital, walaupun diketik huruf kecil
+const kapitalAwal = (s) => s.replace(/(^|\s)(\p{Ll})/gu, (_, spasi, huruf) => spasi + huruf.toUpperCase());
+$("nama").addEventListener("input", (e) => {
+  const el = e.target;
+  const posisi = el.selectionStart;   //panjang teks tidak berubah, jadi posisi kursor bisa dikembalikan
+  el.value = kapitalAwal(el.value);
+  el.setSelectionRange(posisi, posisi);
+});
+
 //register: buat akun di Firebase Auth, lalu simpan profil di members/{uid}
 $("formDaftar").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -21,7 +30,7 @@ $("formDaftar").addEventListener("submit", async (e) => {
   setLoading(btn, true, "Mendaftarkan...");
   try {
     const email = $("email").value.trim().toLowerCase();
-    const nama = $("nama").value.trim();
+    const nama = kapitalAwal($("nama").value.trim());
 
     //1. akun login dibuat oleh Firebase Auth (email unik dan kata sandi dicek otomatis)
     const { user } = await createUserWithEmailAndPassword(auth, email, $("password").value);
