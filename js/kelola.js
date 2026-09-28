@@ -3,8 +3,9 @@ import {
   ref, get, update, onValue, query, orderByChild, equalTo, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  BANDARA, BAGASI, rupiah, tanggalLokal, formatTanggal, getSession,
-  renderNavbar, showAlert, isiKursi, isiBagasi, setLoading
+  BANDARA, BAGASI, rupiah, tanggalLokal, formatTanggal, getSession, authSiap,
+  renderNavbar, showAlert, isiKursi, isiBagasi, setLoading,
+  kursiTerisi, kursiBentrok
 } from "./common.js";
 
 renderNavbar("kelola");
@@ -67,7 +68,8 @@ function tampilkanTiket() {
       </dl>
       ${b.diperbaruiPada ? `<small class="text-muted">Terakhir diubah ${new Date(b.diperbaruiPada).toLocaleString("id-ID")}</small>` : ""}
     </div>`;
-  isiKursi($("pilihKursi"), b.kursi);
+  //kursi penumpang lain di penerbangan ini ditandai (terisi)
+  kursiTerisi(b.flightId, kodeAktif).then((terisi) => isiKursi($("pilihKursi"), b.kursi, terisi));
   isiBagasi($("pilihBagasi"), b.bagasiKg, b.bagasiKg);
 }
 
@@ -85,11 +87,19 @@ async function muatJadwalAlternatif(b) {
   $("pilihJadwal").innerHTML = `<option value="">Pilih jadwal baru</option>` + opsi.map(([id, x]) =>
     `<option value="${id}">${formatTanggal(x.tanggal)}, ${x.jamBerangkat} (${x.kode}) ${rupiah(x.harga)}</option>`).join("");
   $("infoSelisih").textContent = "";
+  $("kursiJadwal").innerHTML = `<option value="">Pilih jadwal dulu</option>`;
 }
 
-$("pilihJadwal").addEventListener("change", () => {
-  const x = jadwalAlternatif[$("pilihJadwal").value];
-  if (!x) return ($("infoSelisih").textContent = "");
+$("pilihJadwal").addEventListener("change", async () => {
+  const idBaru = $("pilihJadwal").value;
+  const x = jadwalAlternatif[idBaru];
+  if (!x) {
+    $("kursiJadwal").innerHTML = `<option value="">Pilih jadwal dulu</option>`;
+    return ($("infoSelisih").textContent = "");
+  }
+  //isi pilihan kursi di penerbangan baru; kursi lama dipakai lagi kalau masih kosong
+  $("kursiJadwal").innerHTML = `<option value="">Memuat kursi...</option>`;
+  isiKursi($("kursiJadwal"), booking.kursi, await kursiTerisi(idBaru));
   const selisih = x.harga - booking.penerbangan.harga;
   $("infoSelisih").textContent = selisih > 0
     ? `Kamu perlu menambah ${rupiah(selisih)}.`
@@ -117,12 +127,20 @@ $("formJadwal").addEventListener("submit", async (e) => {
   const idBaru = $("pilihJadwal").value;
   const x = jadwalAlternatif[idBaru];
   if (!x) return;
+  const kursiBaru = $("kursiJadwal").value;
   const btn = $("btnJadwal");
   setLoading(btn, true);
   try {
+    //kursi di penerbangan baru tidak boleh sudah dimiliki penumpang lain
+    if ((await kursiTerisi(idBaru, kodeAktif)).has(kursiBaru)) {
+      throw new Error(`Kursi ${kursiBaru} di penerbangan baru sudah dipesan penumpang lain. Pilih kursi lain.`);
+    }
     const idLama = booking.flightId;
     await update(ref(db), {
       [`bookings/${kodeAktif}/flightId`]: idBaru,
+      [`bookings/${kodeAktif}/kursi`]: kursiBaru,
+      [`kursi/${idLama}/${booking.kursi}`]: null,       // lepas kunci kursi lama
+      [`kursi/${idBaru}/${kursiBaru}`]: kodeAktif,      // kunci kursi di jadwal baru
       [`bookings/${kodeAktif}/penerbangan`]: {
         kode: x.kode, asal: x.asal, tujuan: x.tujuan, tanggal: x.tanggal,
         jamBerangkat: x.jamBerangkat, jamTiba: x.jamTiba, harga: x.harga
@@ -133,10 +151,13 @@ $("formJadwal").addEventListener("submit", async (e) => {
       [`flights/${idLama}/kursiTersedia`]: increment(1),
       [`flights/${idBaru}/kursiTersedia`]: increment(-1)
     });
-    showAlert("alertKelola", "success", "Jadwal penerbangan diganti.");
+    showAlert("alertKelola", "success", `Jadwal penerbangan diganti, kursi ${kursiBaru}.`);
     await muatJadwalAlternatif({ ...booking, flightId: idBaru });
   } catch (err) {
-    showAlert("alertKelola", "danger", "Gagal mengganti jadwal: " + err.message);
+    const pesan = kursiBentrok(err)
+      ? `Kursi ${kursiBaru} baru saja dipesan penumpang lain. Pilih kursi lain.`
+      : err.message;
+    showAlert("alertKelola", "danger", "Gagal mengganti jadwal: " + pesan);
   } finally {
     setLoading(btn, false);
   }
@@ -150,15 +171,22 @@ $("formKursi").addEventListener("submit", async (e) => {
   const btn = $("btnKursi");
   setLoading(btn, true);
   try {
-    const snap = await get(query(ref(db, "bookings"), orderByChild("flightId"), equalTo(booking.flightId)));
-    let terpakai = false;
-    snap.forEach((c) => { if (c.key !== kodeAktif && c.val().kursi === kursi) terpakai = true; });
-    if (terpakai) throw new Error(`Kursi ${kursi} sudah dipilih penumpang lain. Pilih kursi lain.`);
+    if ((await kursiTerisi(booking.flightId, kodeAktif)).has(kursi)) {
+      throw new Error(`Kursi ${kursi} sudah dipilih penumpang lain. Pilih kursi lain.`);
+    }
 
-    await update(ref(db, `bookings/${kodeAktif}`), { kursi, diperbaruiPada: serverTimestamp() });
+    //multipath: ganti kursi di booking + pindahkan kunci kursi
+    await update(ref(db), {
+      [`bookings/${kodeAktif}/kursi`]: kursi,
+      [`bookings/${kodeAktif}/diperbaruiPada`]: serverTimestamp(),
+      [`kursi/${booking.flightId}/${booking.kursi}`]: null,
+      [`kursi/${booking.flightId}/${kursi}`]: kodeAktif
+    });
     showAlert("alertKelola", "success", `Kursi diubah ke ${kursi}.`);
   } catch (err) {
-    showAlert("alertKelola", "danger", err.message);
+    showAlert("alertKelola", "danger", kursiBentrok(err)
+      ? `Kursi ${kursi} baru saja dipesan penumpang lain. Pilih kursi lain.`
+      : err.message);
   } finally {
     setLoading(btn, false);
   }
@@ -198,6 +226,7 @@ $("formBatal").addEventListener("submit", async (e) => {
   try {
     const updates = {
       [`bookings/${kodeAktif}`]: null,                              // hapus booking
+      [`kursi/${booking.flightId}/${booking.kursi}`]: null,          // kursi bisa dipesan lagi
       [`flights/${booking.flightId}/kursiTersedia`]: increment(1)    // kembalikan kursi
     };
     if (booking.memberId) updates[`members/${booking.memberId}/bookings/${kodeAktif}`] = null;
@@ -214,13 +243,16 @@ $("formBatal").addEventListener("submit", async (e) => {
 const kodeUrl = new URLSearchParams(location.search).get("kode");
 if (kodeUrl) {
   $("kodeBooking").value = kodeUrl;
-  const s = getSession();
-  //member yang login dan memiliki booking ini bisa langsung membukanya
-  if (s) {
-    get(ref(db, `members/${s.id}/bookings/${kodeUrl}`)).then((snap) => {
-      if (snap.exists()) bukaBooking(kodeUrl, null).catch((err) => showAlert("alertKelola", "danger", err.message));
-    });
-  }
-  //tamu dari halaman sukses pemesanan: pesan tetap minta nama belakang
-  if (!s) $("namaBelakangCari").focus();
+  //tunggu Firebase Auth selesai memulihkan status login
+  authSiap.then(() => {
+    const s = getSession();
+    //member yang login dan memiliki booking ini bisa langsung membukanya
+    if (s) {
+      get(ref(db, `members/${s.id}/bookings/${kodeUrl}`)).then((snap) => {
+        if (snap.exists()) bukaBooking(kodeUrl, null).catch((err) => showAlert("alertKelola", "danger", err.message));
+      });
+    }
+    //tamu dari halaman sukses pemesanan: pesan tetap minta nama belakang
+    if (!s) $("namaBelakangCari").focus();
+  });
 }

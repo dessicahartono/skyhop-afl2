@@ -1,26 +1,35 @@
-import { db } from "./firebase-config.js";
+import { db, auth } from "./firebase-config.js";
 import {
   ref, get, set, push, update, remove, onValue, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  BANDARA, rupiah, formatTanggal, getSession, setSession, clearSession,
-  renderNavbar, showAlert, hashPassword, setLoading
+  signOut, updateProfile, updatePassword, deleteUser,
+  reauthenticateWithCredential, EmailAuthProvider
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  BANDARA, rupiah, formatTanggal, getSession, authSiap, pesanAuth,
+  renderNavbar, showAlert, setLoading
 } from "./common.js";
 
-const sesi = getSession();
-if (!sesi) { location.href = "anggota.html"; throw new Error("Belum masuk"); }
 renderNavbar("akun");
+
+//halaman ini khusus anggota: tunggu Firebase Auth memulihkan status login dulu
+const user = await authSiap;
+if (!user) { location.href = "anggota.html"; throw new Error("Belum masuk"); }
+const sesi = getSession();
 
 const $ = (id) => document.getElementById(id);
 const memberRef = ref(db, `members/${sesi.id}`);
 let member = null;
 let formSudahDiisi = false;
+let sedangMenghapus = false;   // supaya onValue tidak ikut bereaksi saat akun sedang dihapus
 
 //read(realtime): onValue akan terpanggil setiap kali data
 //anggota berubah, jadi tampilan selalu sinkron dengan database
-onValue(memberRef, (snap) => {
-  if (!snap.exists()) {   // akun sudah dihapus
-    clearSession();
+onValue(memberRef, async (snap) => {
+  if (sedangMenghapus) return;
+  if (!snap.exists()) {   // profil tidak ada lagi (misalnya dihapus dari Console)
+    await signOut(auth);
     location.href = "index.html";
     return;
   }
@@ -29,7 +38,22 @@ onValue(memberRef, (snap) => {
   tampilkanKartu();
   tampilkanBooking();
   if (!formSudahDiisi) isiFormProfil();
+}, (err) => {
+  if (!sedangMenghapus) showAlert("alertAkun", "danger", "Gagal membaca profil: " + err.message);
 });
+
+//Firebase Auth mewajibkan login ulang sebelum ganti kata sandi atau hapus akun.
+//Caranya: cocokkan lagi kata sandi saat ini (reauthenticate).
+async function konfirmasiKataSandi(kataSandi) {
+  if (!kataSandi) throw new Error("Masukkan kata sandi saat ini.");
+  try {
+    const kredensial = EmailAuthProvider.credential(auth.currentUser.email, kataSandi);
+    await reauthenticateWithCredential(auth.currentUser, kredensial);
+  } catch (err) {
+    const salah = ["auth/invalid-credential", "auth/wrong-password"].includes(err.code);
+    throw new Error(salah ? "Kata sandi saat ini salah." : pesanAuth(err));
+  }
+}
 
 function tampilkanProfil() {
   $("judulNama").textContent = member.nama;
@@ -67,14 +91,20 @@ $("formProfil").addEventListener("submit", async (e) => {
       kewarganegaraan: $("uWn").value,
       diperbaruiPada: serverTimestamp()
     };
-    if ($("uPassword").value) perubahan.password = await hashPassword($("uPassword").value);
+
+    const pwBaru = $("uPassword").value;
+    if (pwBaru) {
+      await konfirmasiKataSandi($("uPasswordLama").value);
+      await updatePassword(auth.currentUser, pwBaru);
+    }
     await update(memberRef, perubahan);
-    setSession({ id: sesi.id, nama: perubahan.nama });
-    renderNavbar("akun");
+    await updateProfile(auth.currentUser, { displayName: perubahan.nama });  // nama di navbar
+    renderNavbar();
     $("uPassword").value = "";
-    showAlert("alertAkun", "success", "Profil tersimpan.");
+    $("uPasswordLama").value = "";
+    showAlert("alertAkun", "success", pwBaru ? "Profil dan kata sandi tersimpan." : "Profil tersimpan.");
   } catch (err) {
-    showAlert("alertAkun", "danger", "Gagal menyimpan profil: " + err.message);
+    showAlert("alertAkun", "danger", "Gagal menyimpan profil: " + pesanAuth(err));
   } finally {
     setLoading(btn, false);
   }
@@ -142,22 +172,30 @@ async function tampilkanBooking() {
   }).join("") || `<div class="kosong">Semua pemesanan sudah dibatalkan.</div>`;
 }
 
-//delete: hapus akun anggota
+//delete: hapus akun anggota (data di database + akun login di Firebase Auth)
 $("formHapus").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!confirm("Akun akan dihapus permanen. Lanjutkan?")) return;
   const btn = $("btnHapus");
   setLoading(btn, true, "Menghapus...");
   try {
+    //1. pastikan yang menghapus benar-benar pemilik akun
+    await konfirmasiKataSandi($("passwordHapus").value);
+    sedangMenghapus = true;
+
+    //2. hapus profil dan lepaskan tautan akun di setiap booking (tiket tetap ada)
     const updates = { [`members/${sesi.id}`]: null };   //null = hapus node
-    //melepaskan tautan akun di setiap booking agar data tiket tetap valid
     for (const kode of Object.keys(member.bookings || {})) {
       updates[`bookings/${kode}/memberId`] = null;
     }
     await update(ref(db), updates);
-    //onValue di atas akan mendeteksi akun hilang lalu mengarahkan ke beranda
+
+    //3. hapus akun login di Firebase Auth (otomatis keluar)
+    await deleteUser(auth.currentUser);
+    location.href = "index.html";
   } catch (err) {
-    showAlert("alertAkun", "danger", "Gagal menghapus akun: " + err.message);
+    sedangMenghapus = false;
+    showAlert("alertAkun", "danger", "Gagal menghapus akun: " + pesanAuth(err));
     setLoading(btn, false);
   }
 });

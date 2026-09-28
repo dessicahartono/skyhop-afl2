@@ -1,9 +1,34 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true,
-    "members":  { ".indexOn": ["email"] },
-    "flights":  { ".indexOn": ["rute"] },
-    "bookings": { ".indexOn": ["flightId"] }
+    "flights": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["rute"]
+    },
+    "bookings": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["flightId"]
+    },
+    "kursi": {
+      ".read": true,
+      ".write": true,
+      "$flightId": {
+        "$nomorKursi": {
+          ".validate": "!data.exists() || data.val() === newData.val()"
+        }
+      }
+    },
+    "members": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "bookings": {
+          "$kode": {
+            ".write": "!newData.exists()"
+          }
+        }
+      }
+    }
   }
 }

@@ -1,4 +1,12 @@
 // Utilitas yang dipakai di semua halaman
+import { db, auth } from "./firebase-config.js";
+import {
+  ref, get, query, orderByChild, equalTo
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 export const DB_SDK = "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 export const BANDARA = {
@@ -26,25 +34,53 @@ export function formatTanggal(iso) {
   });
 }
 
-//sesi login disimpan di browser
-const KEY = "skyhopSession";
-export const getSession = () => {
-  try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
-};
-export const setSession = (s) => localStorage.setItem(KEY, JSON.stringify(s));
-export const clearSession = () => localStorage.removeItem(KEY);
+//sesi login dikelola Firebase Authentication.
+//Firebase menyimpan status login sendiri di browser dan memulihkannya setiap halaman dibuka.
+//Pemulihan butuh waktu sebentar, jadi halaman yang butuh status login menunggu authSiap dulu.
+export const authSiap = new Promise((resolve) => {
+  const berhenti = onAuthStateChanged(auth, (user) => { berhenti(); resolve(user); });
+});
 
-//password di-hash SHA-256
-export async function hashPassword(pw) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+//data pengguna yang sedang login; id = uid dari Firebase Auth, dipakai sebagai kunci members/{uid}
+export function getSession() {
+  const u = auth.currentUser;
+  return u ? { id: u.uid, nama: u.displayName || u.email, email: u.email } : null;
 }
 
+//kode error Firebase Auth diterjemahkan ke pesan yang mudah dipahami
+const PESAN_AUTH = {
+  "auth/email-already-in-use": "Email ini sudah terdaftar. Silakan masuk dengan kata sandimu.",
+  "auth/invalid-email": "Format email tidak valid.",
+  "auth/weak-password": "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.",
+  "auth/missing-password": "Kata sandi belum diisi.",
+  "auth/invalid-credential": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
+  "auth/wrong-password": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
+  "auth/user-not-found": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
+  "auth/too-many-requests": "Terlalu banyak percobaan gagal. Tunggu beberapa menit lalu coba lagi.",
+  "auth/network-request-failed": "Tidak bisa terhubung ke server. Periksa koneksi internetmu.",
+  "auth/requires-recent-login": "Demi keamanan, masukkan kata sandimu saat ini lalu coba lagi.",
+  "auth/operation-not-allowed": "Login email dan kata sandi belum diaktifkan di Firebase Console."
+};
+export const pesanAuth = (err) => PESAN_AUTH[err?.code] || err?.message || "Terjadi kesalahan.";
+
 //komponen UI
-export function renderNavbar(aktif) {
+let menuAktif = "";
+let navbarDidengar = false;
+
+//navbar digambar ulang otomatis setiap status login berubah (masuk / keluar)
+export function renderNavbar(aktif = menuAktif) {
+  menuAktif = aktif;
+  gambarNavbar();
+  if (!navbarDidengar) {
+    navbarDidengar = true;
+    onAuthStateChanged(auth, gambarNavbar);
+  }
+}
+
+function gambarNavbar() {
   const s = getSession();
   const link = (href, id, label) =>
-    `<li class="nav-item"><a class="nav-link ${aktif === id ? "active" : ""}" href="${href}">${label}</a></li>`;
+    `<li class="nav-item"><a class="nav-link ${menuAktif === id ? "active" : ""}" href="${href}">${label}</a></li>`;
   document.getElementById("navbar").innerHTML = `
   <nav class="navbar navbar-expand-lg brand-nav">
     <div class="container">
@@ -63,8 +99,8 @@ export function renderNavbar(aktif) {
       </div>
     </div>
   </nav>`;
-  document.getElementById("btnKeluar")?.addEventListener("click", () => {
-    clearSession();
+  document.getElementById("btnKeluar")?.addEventListener("click", async () => {
+    await signOut(auth);          // keluar dari Firebase Auth
     location.href = "index.html";
   });
 }
@@ -80,15 +116,28 @@ export function isiBandara(select, placeholder) {
     Object.entries(BANDARA).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
 }
 
-export function isiKursi(select, terpilih = "") {
-  let html = "";
-  for (let r = 1; r <= 30; r++) {
-    for (const c of "ABCDEF") {
-      const k = `${r}${c}`;
-      html += `<option value="${k}" ${k === terpilih ? "selected" : ""}>${k}${"AF".includes(c) ? " (jendela)" : "CD".includes(c) ? " (lorong)" : ""}</option>`;
-    }
-  }
-  select.innerHTML = html;
+//kursi yang sudah terisi di satu penerbangan (dari semua booking)
+//kecualiKode: booking milik sendiri tidak dihitung sebagai "terisi"
+export async function kursiTerisi(flightId, kecualiKode = "") {
+  const snap = await get(query(ref(db, "bookings"), orderByChild("flightId"), equalTo(flightId)));
+  const terisi = new Set();
+  snap.forEach((c) => { if (c.key !== kecualiKode) terisi.add(c.val().kursi); });
+  return terisi;
+}
+
+//error dari rules .validate di node kursi = kursi keburu diambil orang lain
+export const kursiBentrok = (err) => String(err?.message || "").includes("PERMISSION_DENIED");
+
+export function isiKursi(select, terpilih = "", terisi = new Set()) {
+  const semua = [];
+  for (let r = 1; r <= 30; r++) for (const c of "ABCDEF") semua.push(`${r}${c}`);
+  //kalau kursi yang diminta sudah terisi, pilih kursi kosong pertama
+  const pilih = terpilih && !terisi.has(terpilih) ? terpilih : semua.find((k) => !terisi.has(k));
+  select.innerHTML = semua.map((k) => {
+    const c = k.slice(-1);
+    const ket = terisi.has(k) ? " (terisi)" : "AF".includes(c) ? " (jendela)" : "CD".includes(c) ? " (lorong)" : "";
+    return `<option value="${k}" ${k === pilih ? "selected" : ""} ${terisi.has(k) ? "disabled" : ""}>${k}${ket}</option>`;
+  }).join("");
 }
 
 export function isiBagasi(select, minimal = 0, terpilih = 0) {

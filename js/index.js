@@ -3,8 +3,9 @@ import {
   ref, get, update, query, orderByChild, equalTo, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  BANDARA, BAGASI, rupiah, tanggalLokal, formatTanggal, getSession,
-  renderNavbar, showAlert, isiBandara, isiKursi, isiBagasi, setLoading
+  BANDARA, BAGASI, rupiah, tanggalLokal, formatTanggal, getSession, authSiap,
+  renderNavbar, showAlert, isiBandara, isiKursi, isiBagasi, setLoading,
+  kursiTerisi, kursiBentrok
 } from "./common.js";
 
 renderNavbar("beranda");
@@ -134,13 +135,16 @@ async function siapkanFormPesan() {
   const f = flightDipilih;
   $("ringkasanFlight").innerHTML = `<strong>${f.kode}</strong> ${BANDARA[f.asal]} ke ${BANDARA[f.tujuan]}<br>
     ${formatTanggal(f.tanggal)}, ${f.jamBerangkat} sampai ${f.jamTiba}`;
-  isiKursi($("kursiP"), "12A");
+  //kursi yang sudah dipesan orang lain ditandai (terisi) dan tidak bisa dipilih
+  $("kursiP").innerHTML = `<option value="">Memuat kursi...</option>`;
+  isiKursi($("kursiP"), "12A", await kursiTerisi(f.id));
   isiBagasi($("bagasiP"));
   const hitung = () => ($("totalP").textContent = rupiah(f.harga + BAGASI[$("bagasiP").value]));
   $("bagasiP").addEventListener("change", hitung);
   hitung();
 
   //read: jika anggota SkyHop Club yang login lansgung isi otomatis dari profilnya
+  await authSiap;                  // tunggu status login dari Firebase Auth
   const s = getSession();
   if (s) {
     const m = (await get(ref(db, `members/${s.id}`))).val();
@@ -164,9 +168,14 @@ function buatKode() {
 async function simpanPesanan(e) {
   e.preventDefault();
   const btn = $("btnPesan");
+  const f = flightDipilih;
+  const kursi = $("kursiP").value;
   setLoading(btn, true, "Menyimpan...");
   try {
-    const f = flightDipilih;
+    //cek ulang tepat sebelum menyimpan, karena bisa saja kursi baru dipesan orang lain
+    if ((await kursiTerisi(f.id)).has(kursi)) {
+      throw new Error(`Kursi ${kursi} sudah dipesan penumpang lain. Pilih kursi lain.`);
+    }
     let kode = buatKode();
     while ((await get(ref(db, `bookings/${kode}`))).exists()) kode = buatKode();
 
@@ -186,7 +195,7 @@ async function simpanPesanan(e) {
         telepon: $("teleponP").value.trim(),
         noPaspor: $("paspor").value.trim().toUpperCase()
       },
-      kursi: $("kursiP").value,
+      kursi,
       bagasiKg,
       totalHarga: f.harga + BAGASI[bagasiKg],
       status: "Terkonfirmasi",
@@ -194,9 +203,12 @@ async function simpanPesanan(e) {
       dibuatPada: serverTimestamp()
     };
 
-    //multipath update: simpan booking + kurangi kursi + tautkan ke akun
+    //multipath update: simpan booking + kunci kursi + kurangi kursi + tautkan ke akun
+    //node kursi/{flightId}/{kursi} dijaga rules .validate: kalau sudah milik booking lain,
+    //seluruh update ditolak server (mencegah dua orang menyimpan kursi sama di detik yang sama)
     const updates = {
       [`bookings/${kode}`]: booking,
+      [`kursi/${f.id}/${kursi}`]: kode,
       [`flights/${f.id}/kursiTersedia`]: increment(-1)
     };
     if (s) updates[`members/${s.id}/bookings/${kode}`] = true;
@@ -216,8 +228,13 @@ async function simpanPesanan(e) {
       </div>`;
     cariPenerbangan();
   } catch (err) {
-    showAlert("alertPesan", "danger", "Gagal menyimpan pemesanan: " + err.message);
+    const pesan = kursiBentrok(err)
+      ? `Kursi ${kursi} baru saja dipesan penumpang lain. Pilih kursi lain.`
+      : err.message;
+    showAlert("alertPesan", "danger", "Gagal menyimpan pemesanan: " + pesan);
     setLoading(btn, false);
+    //muat ulang daftar kursi supaya kursi yang barusan terisi ikut ditandai
+    isiKursi($("kursiP"), "", await kursiTerisi(f.id).catch(() => new Set()));
   }
 }
 
