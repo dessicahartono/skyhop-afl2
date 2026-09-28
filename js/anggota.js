@@ -28,11 +28,11 @@ function arahkanKeLogin(email) {
   $("passwordMasuk").focus();
 }
 
-//link verifikasi dikirim dengan alamat kembali ke halaman ini.
+//link di email (verifikasi / reset kata sandi) dikirim dengan alamat kembali ke halaman ini.
 //handleCodeInApp: link di email diteruskan langsung ke halaman ini (bukan ke halaman bawaan Firebase),
-//lalu verifikasinya diproses sendiri oleh verifikasiEmail() di bawah
-const linkKembali = () => ({
-  url: `${location.origin}${location.pathname}?verifikasi=selesai`,
+//lalu diproses sendiri oleh verifikasiEmail() atau tampilkanFormReset() di bawah
+const linkKembali = (jenis = "verifikasi") => ({
+  url: `${location.origin}${location.pathname}?${jenis}=selesai`,
   handleCodeInApp: true
 });
 
@@ -176,7 +176,7 @@ $("btnLupa").addEventListener("click", async () => {
     return showAlert("alertAnggota", "info", "Isi email di form Masuk dulu, lalu klik Lupa kata sandi.");
   }
   try {
-    await sendPasswordResetEmail(auth, email);
+    await sendPasswordResetEmail(auth, email, linkKembali("reset"));
     showAlert("alertAnggota", "success",
       `Kalau <strong>${email}</strong> terdaftar, tautan untuk membuat kata sandi baru sudah dikirim. Cek juga folder spam.`);
   } catch (err) {
@@ -196,6 +196,11 @@ if (mode && oobCode) {
   //kembali dari halaman verifikasi bawaan Firebase (tombol Continue)
   history.replaceState(null, "", location.pathname);
   showAlert("alertAnggota", "success", "Email berhasil diverifikasi. Silakan masuk.");
+  arahkanKeLogin();
+} else if (params.get("reset") === "selesai") {
+  //kembali dari halaman reset kata sandi bawaan Firebase (tombol Continue)
+  history.replaceState(null, "", location.pathname);
+  showAlert("alertAnggota", "success", "Kata sandi berhasil diubah. Silakan masuk dengan kata sandi baru.");
   arahkanKeLogin();
 }
 
