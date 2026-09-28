@@ -144,7 +144,7 @@ Untuk ganti kata sandi dan hapus akun, Firebase mewajibkan pengguna login ulang.
 - Satu email hanya bisa dipakai untuk satu akun (dicek otomatis oleh Firebase Auth).
 - Kata sandi minimal 6 karakter (aturan Firebase Auth).
 - Akun yang daftar dengan email dan kata sandi harus memverifikasi email lewat link yang dikirim saat daftar. Sebelum diverifikasi, login ditolak (tombol Kirim ulang link verifikasi tersedia). Akun Google tidak perlu verifikasi.
-- Link di email diarahkan ke `anggota.html` (Firebase Console > Authentication > Templates > Customize action URL), yang langsung memverifikasi email lalu menampilkan form Masuk.
+- Link di email diarahkan ke `anggota.html` (dengan `handleCodeInApp: true` saat mengirim link), yang langsung memverifikasi email lalu menampilkan form Masuk.
 - Data anggota di `members/{uid}` hanya bisa dibaca dan diubah oleh pemiliknya sendiri.
 - Satu kursi di penerbangan yang sama tidak bisa dipilih dua penumpang, baik saat pesan tiket, ganti jadwal, maupun ubah kursi. Kursi yang sudah terisi ditandai "(terisi)" dan tidak bisa dipilih. Satu orang tetap boleh memesan beberapa kursi (satu kode booking per kursi).
 - Pengecekan kursi dilakukan dua lapis: di browser (query `bookings` berdasarkan `flightId`) dan di server (rules `.validate` pada node `kursi`). Rules di `database.rules.json` harus di-publish ke Firebase Console supaya lapis kedua aktif.

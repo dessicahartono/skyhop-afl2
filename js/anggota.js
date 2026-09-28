@@ -28,8 +28,13 @@ function arahkanKeLogin(email) {
   $("passwordMasuk").focus();
 }
 
-//link verifikasi dikirim dengan alamat kembali ke halaman ini
-const linkKembali = () => ({ url: `${location.origin}${location.pathname}?verifikasi=selesai` });
+//link verifikasi dikirim dengan alamat kembali ke halaman ini.
+//handleCodeInApp: link di email diteruskan langsung ke halaman ini (bukan ke halaman bawaan Firebase),
+//lalu verifikasinya diproses sendiri oleh verifikasiEmail() di bawah
+const linkKembali = () => ({
+  url: `${location.origin}${location.pathname}?verifikasi=selesai`,
+  handleCodeInApp: true
+});
 
 //huruf pertama setiap kata di nama otomatis jadi kapital, walaupun diketik huruf kecil
 const kapitalAwal = (s) => s.replace(/(^|\s)(\p{Ll})/gu, (_, spasi, huruf) => spasi + huruf.toUpperCase());
@@ -179,16 +184,19 @@ $("btnLupa").addEventListener("click", async () => {
   }
 });
 
-//halaman ini juga menjadi penangan link dari email Firebase (custom action URL)
-if (params.get("verifikasi") === "selesai") {
-  //kembali dari halaman verifikasi bawaan Firebase
-  showAlert("alertAnggota", "success", "Email berhasil diverifikasi. Silakan masuk.");
-  arahkanKeLogin();
-} else if (mode && oobCode) {
+//halaman ini juga menjadi penangan link dari email Firebase.
+//Kode (mode + oobCode) dicek lebih dulu, karena dengan handleCodeInApp
+//Firebase menambahkannya ke alamat ?verifikasi=selesai
+if (mode && oobCode) {
   history.replaceState(null, "", location.pathname);   // kode di URL hanya berlaku sekali, jadi dibuang dari address bar
   if (mode === "verifyEmail") verifikasiEmail(oobCode);
   else if (mode === "resetPassword") tampilkanFormReset(oobCode);
   else showAlert("alertAnggota", "info", "Link ini tidak dikenali. Silakan masuk seperti biasa.");
+} else if (params.get("verifikasi") === "selesai") {
+  //kembali dari halaman verifikasi bawaan Firebase (tombol Continue)
+  history.replaceState(null, "", location.pathname);
+  showAlert("alertAnggota", "success", "Email berhasil diverifikasi. Silakan masuk.");
+  arahkanKeLogin();
 }
 
 //verifikasi email: cek kodenya dulu untuk tahu emailnya, lalu tandai email sebagai terverifikasi
@@ -200,6 +208,13 @@ async function verifikasiEmail(kode) {
       `Email <strong>${info.data.email}</strong> berhasil diverifikasi. Silakan masuk dengan kata sandimu.`);
     arahkanKeLogin(info.data.email);
   } catch (err) {
+    //link yang sama diklik dua kali: kemungkinan emailnya sudah terverifikasi di klik pertama
+    if (err.code === "auth/invalid-action-code") {
+      showAlert("alertAnggota", "warning", "Link verifikasi ini sudah pernah dipakai. Kalau emailmu sudah terverifikasi, " +
+        "silakan langsung masuk. Kalau belum, masuk lalu klik Kirim ulang link verifikasi.");
+      arahkanKeLogin();
+      return;
+    }
     showAlert("alertAnggota", "danger", "Verifikasi gagal: " + pesanAuth(err));
   }
 }
