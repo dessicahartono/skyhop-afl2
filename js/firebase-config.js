@@ -16,3 +16,4 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 export const auth = getAuth(app);   //firebase authentication(register & login)
+auth.languageCode = "id";           //email verifikasi & reset kata sandi dikirim dalam bahasa Indonesia

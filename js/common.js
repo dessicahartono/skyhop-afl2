@@ -37,14 +37,28 @@ export function formatTanggal(iso) {
 //sesi login dikelola Firebase Authentication.
 //Firebase menyimpan status login sendiri di browser dan memulihkannya setiap halaman dibuka.
 //Pemulihan butuh waktu sebentar, jadi halaman yang butuh status login menunggu authSiap dulu.
+//Akun email yang belum diverifikasi dianggap belum login dan langsung dikeluarkan.
 export const authSiap = new Promise((resolve) => {
-  const berhenti = onAuthStateChanged(auth, (user) => { berhenti(); resolve(user); });
+  const berhenti = onAuthStateChanged(auth, async (user) => {
+    berhenti();
+    if (belumVerifikasi(user)) {
+      await signOut(auth);
+      user = null;
+    }
+    resolve(user);
+  });
 });
+
+//akun daftar lewat email dan kata sandi yang belum klik link verifikasi.
+//Akun Google tidak termasuk, karena emailnya sudah diverifikasi oleh Google.
+export function belumVerifikasi(user) {
+  return !!user && !user.emailVerified && user.providerData.some((p) => p.providerId === "password");
+}
 
 //data pengguna yang sedang login; id = uid dari Firebase Auth, dipakai sebagai kunci members/{uid}
 export function getSession() {
   const u = auth.currentUser;
-  return u ? { id: u.uid, nama: u.displayName || u.email, email: u.email } : null;
+  return u && !belumVerifikasi(u) ? { id: u.uid, nama: u.displayName || u.email, email: u.email } : null;
 }
 
 //kode error Firebase Auth diterjemahkan ke pesan yang mudah dipahami
@@ -53,9 +67,15 @@ const PESAN_AUTH = {
   "auth/invalid-email": "Format email tidak valid.",
   "auth/weak-password": "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.",
   "auth/missing-password": "Kata sandi belum diisi.",
+  //invalid-credential muncul kalau Email enumeration protection di Firebase masih aktif:
+  //Firebase sengaja tidak memberi tahu apakah yang salah emailnya atau kata sandinya
   "auth/invalid-credential": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
-  "auth/wrong-password": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
-  "auth/user-not-found": "Email atau kata sandi salah. Periksa kembali lalu coba lagi.",
+  "auth/wrong-password": "Kata sandi salah. Coba lagi, atau klik Lupa kata sandi untuk membuat yang baru.",
+  "auth/user-not-found": "Akun dengan email ini tidak ditemukan. Periksa lagi emailnya, atau daftar akun baru.",
+  "auth/user-disabled": "Akun ini sedang dinonaktifkan. Hubungi admin SkyHop.",
+  "auth/invalid-action-code": "Link sudah tidak berlaku atau sudah pernah dipakai. Minta link baru lalu coba lagi.",
+  "auth/expired-action-code": "Link sudah kedaluwarsa. Minta link baru lalu coba lagi.",
+  "auth/unauthorized-continue-uri": "Alamat website belum ada di Authorized domains Firebase.",
   "auth/too-many-requests": "Terlalu banyak percobaan gagal. Tunggu beberapa menit lalu coba lagi.",
   "auth/network-request-failed": "Tidak bisa terhubung ke server. Periksa koneksi internetmu.",
   "auth/requires-recent-login": "Demi keamanan, masukkan kata sandimu saat ini lalu coba lagi.",

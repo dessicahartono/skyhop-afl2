@@ -3,16 +3,33 @@ import {
   ref, get, set, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
-  createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  updateProfile, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  updateProfile, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider,
+  sendEmailVerification, checkActionCode, applyActionCode,
+  verifyPasswordResetCode, confirmPasswordReset
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { renderNavbar, showAlert, authSiap, pesanAuth, setLoading } from "./common.js";
 
 renderNavbar("anggota");
 const $ = (id) => document.getElementById(id);
 
+//link dari email Firebase (verifikasi email / reset kata sandi) dibuka di halaman ini
+//dengan parameter ?mode=...&oobCode=...
+const params = new URLSearchParams(location.search);
+const mode = params.get("mode");
+const oobCode = params.get("oobCode");
+
 //kalau sudah login, tidak perlu daftar/masuk lagi
-authSiap.then((user) => { if (user) location.href = "akun.html"; });
+authSiap.then((user) => { if (user && !mode) location.href = "akun.html"; });
+
+//setelah verifikasi, email boleh dipakai login: isi form Masuk lalu arahkan kursor ke kata sandi
+function arahkanKeLogin(email) {
+  if (email) $("emailMasuk").value = email;
+  $("passwordMasuk").focus();
+}
+
+//link verifikasi dikirim dengan alamat kembali ke halaman ini
+const linkKembali = () => ({ url: `${location.origin}${location.pathname}?verifikasi=selesai` });
 
 //huruf pertama setiap kata di nama otomatis jadi kapital, walaupun diketik huruf kecil
 const kapitalAwal = (s) => s.replace(/(^|\s)(\p{Ll})/gu, (_, spasi, huruf) => spasi + huruf.toUpperCase());
@@ -39,6 +56,7 @@ $("formDaftar").addEventListener("submit", async (e) => {
     await updateProfile(user, { displayName: nama });
 
     //3. data profil lain disimpan di Realtime Database dengan kunci uid dari Auth
+    //(ditulis sekarang, selagi masih login, karena rules members butuh auth.uid)
     await set(ref(db, `members/${user.uid}`), {
       nama,
       email,
@@ -49,7 +67,15 @@ $("formDaftar").addEventListener("submit", async (e) => {
       nomorAnggota: "SH" + Date.now().toString().slice(-8),
       bergabungPada: serverTimestamp()
     });
-    location.href = "akun.html";
+
+    //4. kirim link verifikasi ke email, lalu keluarkan lagi: akun baru boleh login setelah email diverifikasi
+    await sendEmailVerification(user, linkKembali());
+    await signOut(auth);
+    e.target.reset();
+    $("emailMasuk").value = email;
+    showAlert("alertAnggota", "success",
+      `Akun berhasil dibuat. Link verifikasi sudah dikirim ke <strong>${email}</strong>.
+      Buka email tersebut dan klik linknya, lalu masuk di form sebelah kanan. Cek juga folder spam.`);
   } catch (err) {
     showAlert("alertAnggota", err.code === "auth/email-already-in-use" ? "warning" : "danger",
       "Pendaftaran gagal: " + pesanAuth(err));
@@ -96,15 +122,46 @@ $("formMasuk").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("btnMasuk");
   setLoading(btn, true, "Memeriksa...");
+  const email = $("emailMasuk").value.trim().toLowerCase();
   try {
-    await signInWithEmailAndPassword(auth, $("emailMasuk").value.trim().toLowerCase(), $("passwordMasuk").value);
+    const { user } = await signInWithEmailAndPassword(auth, email, $("passwordMasuk").value);
+
+    //email belum diverifikasi: login ditolak, pengguna langsung dikeluarkan lagi
+    if (!user.emailVerified) {
+      await signOut(auth);
+      showAlert("alertAnggota", "warning",
+        `Email <strong>${email}</strong> belum diverifikasi. Klik link verifikasi di emailmu dulu, lalu masuk lagi.
+        <br><button type="button" class="btn btn-sm btn-ink mt-2" id="btnKirimUlang">Kirim ulang link verifikasi</button>`);
+      $("btnKirimUlang").addEventListener("click", kirimUlangVerifikasi);
+      return;
+    }
     location.href = "akun.html";
   } catch (err) {
-    showAlert("alertAnggota", "danger", "Gagal masuk: " + pesanAuth(err));
+    //akun tidak ditemukan dan kata sandi salah diberi pesan yang berbeda
+    const jenis = err.code === "auth/user-not-found" ? "warning" : "danger";
+    showAlert("alertAnggota", jenis, "Gagal masuk: " + pesanAuth(err));
   } finally {
     setLoading(btn, false);
   }
 });
+
+//kirim ulang link verifikasi: Firebase hanya bisa mengirimnya untuk pengguna yang sedang login,
+//jadi masuk sebentar dengan email dan kata sandi di form, kirim, lalu keluar lagi
+async function kirimUlangVerifikasi(e) {
+  const btn = e.target;
+  setLoading(btn, true, "Mengirim...");
+  const email = $("emailMasuk").value.trim().toLowerCase();
+  try {
+    const { user } = await signInWithEmailAndPassword(auth, email, $("passwordMasuk").value);
+    await sendEmailVerification(user, linkKembali());
+    await signOut(auth);
+    showAlert("alertAnggota", "success",
+      `Link verifikasi baru sudah dikirim ke <strong>${email}</strong>. Link lama tidak berlaku lagi.`);
+  } catch (err) {
+    await signOut(auth);
+    showAlert("alertAnggota", "danger", "Gagal mengirim ulang link: " + pesanAuth(err));
+  }
+}
 
 //lupa kata sandi: Firebase mengirim email berisi tautan untuk membuat kata sandi baru
 $("btnLupa").addEventListener("click", async () => {
@@ -121,3 +178,55 @@ $("btnLupa").addEventListener("click", async () => {
     showAlert("alertAnggota", "danger", "Gagal mengirim email: " + pesanAuth(err));
   }
 });
+
+//halaman ini juga menjadi penangan link dari email Firebase (custom action URL)
+if (params.get("verifikasi") === "selesai") {
+  //kembali dari halaman verifikasi bawaan Firebase
+  showAlert("alertAnggota", "success", "Email berhasil diverifikasi. Silakan masuk.");
+  arahkanKeLogin();
+} else if (mode && oobCode) {
+  history.replaceState(null, "", location.pathname);   // kode di URL hanya berlaku sekali, jadi dibuang dari address bar
+  if (mode === "verifyEmail") verifikasiEmail(oobCode);
+  else if (mode === "resetPassword") tampilkanFormReset(oobCode);
+  else showAlert("alertAnggota", "info", "Link ini tidak dikenali. Silakan masuk seperti biasa.");
+}
+
+//verifikasi email: cek kodenya dulu untuk tahu emailnya, lalu tandai email sebagai terverifikasi
+async function verifikasiEmail(kode) {
+  try {
+    const info = await checkActionCode(auth, kode);
+    await applyActionCode(auth, kode);
+    showAlert("alertAnggota", "success",
+      `Email <strong>${info.data.email}</strong> berhasil diverifikasi. Silakan masuk dengan kata sandimu.`);
+    arahkanKeLogin(info.data.email);
+  } catch (err) {
+    showAlert("alertAnggota", "danger", "Verifikasi gagal: " + pesanAuth(err));
+  }
+}
+
+//reset kata sandi: link dari "Lupa kata sandi" juga diarahkan ke halaman ini
+async function tampilkanFormReset(kode) {
+  try {
+    const email = await verifyPasswordResetCode(auth, kode);
+    $("emailReset").textContent = email;
+    $("panelReset").classList.remove("d-none");
+    $("passwordBaru").focus();
+
+    $("formReset").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("btnReset");
+      setLoading(btn, true, "Menyimpan...");
+      try {
+        await confirmPasswordReset(auth, kode, $("passwordBaru").value);
+        $("panelReset").classList.add("d-none");
+        showAlert("alertAnggota", "success", "Kata sandi baru tersimpan. Silakan masuk.");
+        arahkanKeLogin(email);
+      } catch (err) {
+        showAlert("alertAnggota", "danger", "Gagal menyimpan kata sandi: " + pesanAuth(err));
+        setLoading(btn, false);
+      }
+    });
+  } catch (err) {
+    showAlert("alertAnggota", "danger", "Link reset kata sandi tidak bisa dipakai: " + pesanAuth(err));
+  }
+}

@@ -20,6 +20,22 @@
     <p class="mb-4">Daftar gratis untuk menyimpan data penumpang, kartu pembayaran, dan riwayat pemesananmu.</p>
     <div id="alertAnggota"></div>
 
+    <!-- muncul hanya saat membuka link reset kata sandi dari email -->
+    <section class="panel mb-4 d-none" id="panelReset">
+      <h2 class="panel-judul">Buat kata sandi baru</h2>
+      <p>Untuk akun <strong id="emailReset"></strong></p>
+      <form id="formReset" class="row g-2">
+        <div class="col-md-8">
+          <label class="form-label" for="passwordBaru">Kata sandi baru</label>
+          <input type="password" class="form-control" id="passwordBaru" required minlength="6" autocomplete="new-password">
+          <div class="form-text">Minimal 6 karakter.</div>
+        </div>
+        <div class="col-md-4 d-grid align-self-start pt-md-4">
+          <button class="btn btn-kuning" id="btnReset">Simpan kata sandi</button>
+        </div>
+      </form>
+    </section>
+
     <div class="row g-4">
       <!-- create: pendaftaran akun baru -->
       <div class="col-lg-7">

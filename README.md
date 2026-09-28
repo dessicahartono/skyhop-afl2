@@ -128,6 +128,8 @@ Jumlah kursi diubah dengan `increment()` supaya perhitungannya dilakukan langsun
 | Login            | js/anggota.js | `signInWithEmailAndPassword()`                        |
 | Daftar / masuk dengan Google | js/anggota.js | `signInWithPopup()` dengan `GoogleAuthProvider` |
 | Lupa kata sandi  | js/anggota.js | `sendPasswordResetEmail()`                            |
+| Verifikasi email | js/anggota.js | `sendEmailVerification()`, `checkActionCode()`, `applyActionCode()` |
+| Reset kata sandi dari link email | js/anggota.js | `verifyPasswordResetCode()`, `confirmPasswordReset()` |
 | Cek status login | js/common.js  | `onAuthStateChanged()`                                |
 | Logout           | js/common.js  | `signOut()`                                           |
 | Ganti kata sandi | js/akun.js    | `reauthenticateWithCredential()`, `updatePassword()`  |
@@ -141,6 +143,8 @@ Untuk ganti kata sandi dan hapus akun, Firebase mewajibkan pengguna login ulang.
 
 - Satu email hanya bisa dipakai untuk satu akun (dicek otomatis oleh Firebase Auth).
 - Kata sandi minimal 6 karakter (aturan Firebase Auth).
+- Akun yang daftar dengan email dan kata sandi harus memverifikasi email lewat link yang dikirim saat daftar. Sebelum diverifikasi, login ditolak (tombol Kirim ulang link verifikasi tersedia). Akun Google tidak perlu verifikasi.
+- Link di email diarahkan ke `anggota.html` (Firebase Console > Authentication > Templates > Customize action URL), yang langsung memverifikasi email lalu menampilkan form Masuk.
 - Data anggota di `members/{uid}` hanya bisa dibaca dan diubah oleh pemiliknya sendiri.
 - Satu kursi di penerbangan yang sama tidak bisa dipilih dua penumpang, baik saat pesan tiket, ganti jadwal, maupun ubah kursi. Kursi yang sudah terisi ditandai "(terisi)" dan tidak bisa dipilih. Satu orang tetap boleh memesan beberapa kursi (satu kode booking per kursi).
 - Pengecekan kursi dilakukan dua lapis: di browser (query `bookings` berdasarkan `flightId`) dan di server (rules `.validate` pada node `kursi`). Rules di `database.rules.json` harus di-publish ke Firebase Console supaya lapis kedua aktif.
