@@ -71,7 +71,7 @@ Mengelola pemesanan
 
 ## Struktur data
 
-Realtime Database menyimpan data dalam bentuk JSON bertingkat, tidak dalam bentuk tabel. Ada tiga node utama:
+Realtime Database menyimpan data dalam bentuk JSON bertingkat, tidak dalam bentuk tabel. Ada empat node utama:
 
 ```
 flights/{SH277_2026-09-30}
@@ -155,5 +155,4 @@ Untuk ganti kata sandi dan hapus akun, Firebase mewajibkan pengguna login ulang.
 
 - Harga dan jadwal penerbangan adalah data contoh, bukan harga asli dari maskapai.
 - Node `members` sudah dilindungi rules berbasis Firebase Auth. Node `flights`, `bookings`, dan `kursi` masih terbuka karena tamu yang tidak login tetap boleh memesan dan mengelola tiket dengan kode booking.
-- Akun lama dari versi sebelumnya (login buatan sendiri dengan hash SHA-256) tidak bisa dipakai lagi dan perlu mendaftar ulang, karena akunnya belum ada di Firebase Authentication.
-- Nomor kartu pembayaran tidak disimpan lengkap, hanya 4 digit terakhir.
+- Nomor kartu pembayaran(hanya sebagai data contoh) tidak disimpan lengkap, hanya 4 digit terakhir.
