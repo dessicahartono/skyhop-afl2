@@ -49,7 +49,7 @@ export function getSession() {
 
 //kode error Firebase Auth diterjemahkan ke pesan yang mudah dipahami
 const PESAN_AUTH = {
-  "auth/email-already-in-use": "Email ini sudah terdaftar. Silakan masuk dengan kata sandimu.",
+  "auth/email-already-in-use": "Email ini sudah terdaftar. Silakan masuk dengan kata sandimu atau dengan Google.",
   "auth/invalid-email": "Format email tidak valid.",
   "auth/weak-password": "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.",
   "auth/missing-password": "Kata sandi belum diisi.",
@@ -59,7 +59,12 @@ const PESAN_AUTH = {
   "auth/too-many-requests": "Terlalu banyak percobaan gagal. Tunggu beberapa menit lalu coba lagi.",
   "auth/network-request-failed": "Tidak bisa terhubung ke server. Periksa koneksi internetmu.",
   "auth/requires-recent-login": "Demi keamanan, masukkan kata sandimu saat ini lalu coba lagi.",
-  "auth/operation-not-allowed": "Login email dan kata sandi belum diaktifkan di Firebase Console."
+  "auth/operation-not-allowed": "Login email dan kata sandi belum diaktifkan di Firebase Console.",
+  "auth/configuration-not-found": "Firebase Authentication belum diaktifkan di Firebase Console.",
+  "auth/popup-blocked": "Popup login diblokir browser. Izinkan popup untuk situs ini lalu coba lagi.",
+  "auth/unauthorized-domain": "Domain ini belum diizinkan. Tambahkan di Firebase Console > Authentication > Settings > Authorized domains.",
+  "auth/account-exists-with-different-credential": "Email ini sudah terdaftar dengan cara masuk lain. Masuk dengan kata sandi dulu.",
+  "auth/user-mismatch": "Akun Google yang dipilih berbeda dengan akun yang sedang masuk."
 };
 export const pesanAuth = (err) => PESAN_AUTH[err?.code] || err?.message || "Terjadi kesalahan.";
 

@@ -4,7 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   signOut, updateProfile, updatePassword, deleteUser,
-  reauthenticateWithCredential, EmailAuthProvider
+  reauthenticateWithCredential, EmailAuthProvider, reauthenticateWithPopup, GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   BANDARA, rupiah, formatTanggal, getSession, authSiap, pesanAuth,
@@ -17,6 +17,15 @@ renderNavbar("akun");
 const user = await authSiap;
 if (!user) { location.href = "anggota.html"; throw new Error("Belum masuk"); }
 const sesi = getSession();
+
+//akun yang daftar lewat Google tidak punya kata sandi SkyHop,
+//jadi kolom kata sandi disembunyikan dan konfirmasi dilakukan lewat popup Google
+const pakaiPassword = user.providerData.some((p) => p.providerId === "password");
+if (!pakaiPassword) {
+  document.querySelectorAll(".bagian-password").forEach((el) => el.classList.add("d-none"));
+  document.getElementById("passwordHapus").required = false;
+  document.getElementById("infoHapusGoogle").classList.remove("d-none");
+}
 
 const $ = (id) => document.getElementById(id);
 const memberRef = ref(db, `members/${sesi.id}`);
@@ -43,8 +52,12 @@ onValue(memberRef, async (snap) => {
 });
 
 //Firebase Auth mewajibkan login ulang sebelum ganti kata sandi atau hapus akun.
-//Caranya: cocokkan lagi kata sandi saat ini (reauthenticate).
+//Caranya: cocokkan lagi kata sandi saat ini, atau pilih lagi akun Google (reauthenticate).
 async function konfirmasiKataSandi(kataSandi) {
+  if (!pakaiPassword) {
+    await reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
+    return;
+  }
   if (!kataSandi) throw new Error("Masukkan kata sandi saat ini.");
   try {
     const kredensial = EmailAuthProvider.credential(auth.currentUser.email, kataSandi);
@@ -58,12 +71,13 @@ async function konfirmasiKataSandi(kataSandi) {
 function tampilkanProfil() {
   $("judulNama").textContent = member.nama;
   $("noAnggota").textContent = member.nomorAnggota;
+  const gender = { L: "Laki-laki", P: "Perempuan" };
   const baris = [
     ["Email", member.email],
-    ["Telepon", member.telepon],
-    ["Tanggal lahir", formatTanggal(member.tanggalLahir)],
+    ["Telepon", member.telepon || "-"],
+    ["Tanggal lahir", member.tanggalLahir ? formatTanggal(member.tanggalLahir) : "-"],
     ["Kewarganegaraan", member.kewarganegaraan],
-    ["Jenis kelamin", member.jenisKelamin === "P" ? "Perempuan" : "Laki-laki"],
+    ["Jenis kelamin", gender[member.jenisKelamin] || "-"],
     ["Bergabung", member.bergabungPada ? new Date(member.bergabungPada).toLocaleDateString("id-ID") : "-"]
   ];
   $("profil").innerHTML = baris.map(([k, v]) =>
@@ -72,10 +86,15 @@ function tampilkanProfil() {
 
 function isiFormProfil() {
   $("uNama").value = member.nama;
-  $("uTelepon").value = member.telepon;
-  $("uTglLahir").value = member.tanggalLahir;
+  $("uTelepon").value = member.telepon || "";
+  $("uTglLahir").value = member.tanggalLahir || "";
   $("uWn").value = member.kewarganegaraan;
+  $("uGender").value = member.jenisKelamin || "";
   formSudahDiisi = true;
+  //anggota baru dari Google belum punya telepon, tanggal lahir, dan jenis kelamin
+  if (!member.telepon || !member.tanggalLahir || !member.jenisKelamin) {
+    showAlert("alertAkun", "info", "Lengkapi profilmu (telepon, tanggal lahir, dan jenis kelamin) di form Ubah profil.");
+  }
 }
 
 //update: ubah informasi profil
@@ -89,6 +108,7 @@ $("formProfil").addEventListener("submit", async (e) => {
       telepon: $("uTelepon").value.trim(),
       tanggalLahir: $("uTglLahir").value,
       kewarganegaraan: $("uWn").value,
+      jenisKelamin: $("uGender").value,
       diperbaruiPada: serverTimestamp()
     };
 

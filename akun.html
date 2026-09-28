@@ -62,11 +62,19 @@
               </select>
             </div>
             <div class="col-md-6">
+              <label class="form-label" for="uGender">Jenis kelamin</label>
+              <select class="form-select" id="uGender" required>
+                <option value="" disabled>Pilih</option>
+                <option value="L">Laki-laki</option>
+                <option value="P">Perempuan</option>
+              </select>
+            </div>
+            <div class="col-md-6 bagian-password">
               <label class="form-label" for="uPassword">Kata sandi baru</label>
               <input type="password" class="form-control" id="uPassword" minlength="6" autocomplete="new-password">
               <div class="form-text">Kosongkan jika tidak ingin mengganti.</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 bagian-password">
               <label class="form-label" for="uPasswordLama">Kata sandi saat ini</label>
               <input type="password" class="form-control" id="uPasswordLama" autocomplete="current-password">
               <div class="form-text">Wajib diisi hanya kalau mengganti kata sandi.</div>
@@ -125,8 +133,12 @@
           <form id="formHapus" class="d-grid gap-2">
             <label class="form-label" for="konfirmasiHapus">Ketik <strong>HAPUS</strong> untuk konfirmasi</label>
             <input class="form-control" id="konfirmasiHapus" required pattern="HAPUS" autocomplete="off">
-            <label class="form-label" for="passwordHapus">Kata sandi</label>
-            <input type="password" class="form-control" id="passwordHapus" required autocomplete="current-password">
+            <div class="bagian-password d-grid gap-2">
+              <label class="form-label mb-0" for="passwordHapus">Kata sandi</label>
+              <input type="password" class="form-control" id="passwordHapus" required autocomplete="current-password">
+            </div>
+            <p class="small mb-0 d-none" id="infoHapusGoogle">Setelah klik tombol di bawah, pilih akun Google-mu
+              untuk konfirmasi.</p>
             <button class="btn btn-danger" id="btnHapus">Hapus akun saya</button>
           </form>
         </section>

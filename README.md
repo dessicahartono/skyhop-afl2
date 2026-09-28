@@ -34,7 +34,7 @@ Setiap halaman HTML punya satu file JS sendiri. Fungsi yang dipakai bersama, mis
 
 ## Cara menjalankan
 
-1. Aktifkan Firebase Authentication: buka Firebase Console > Authentication > Get started > tab Sign-in method > pilih **Email/Password** > Enable > Save.
+1. Aktifkan Firebase Authentication: buka Firebase Console > Authentication > Get started > tab Sign-in method > pilih **Email/Password** > Enable > Save. Ulangi untuk **Google** (isi Project support email lalu Save).
 2. Publish rules: salin isi `database.rules.json` ke Firebase Console > Realtime Database > tab Rules, lalu klik Publish.
 3. Jalankan lewat server lokal, misalnya dengan Live Server di VS Code (klik kanan `index.html` > Open with Live Server). Website tidak bisa dibuka dengan klik dua kali file HTML karena file JS memakai ES module (`import` dan `export`).
 
@@ -126,6 +126,7 @@ Jumlah kursi diubah dengan `increment()` supaya perhitungannya dilakukan langsun
 | ---------------- | ------------- | ----------------------------------------------------- |
 | Register         | js/anggota.js | `createUserWithEmailAndPassword()`, `updateProfile()` |
 | Login            | js/anggota.js | `signInWithEmailAndPassword()`                        |
+| Daftar / masuk dengan Google | js/anggota.js | `signInWithPopup()` dengan `GoogleAuthProvider` |
 | Lupa kata sandi  | js/anggota.js | `sendPasswordResetEmail()`                            |
 | Cek status login | js/common.js  | `onAuthStateChanged()`                                |
 | Logout           | js/common.js  | `signOut()`                                           |

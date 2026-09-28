@@ -1,10 +1,10 @@
 import { db, auth } from "./firebase-config.js";
 import {
-  ref, set, serverTimestamp
+  ref, get, set, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  updateProfile, sendPasswordResetEmail
+  updateProfile, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { renderNavbar, showAlert, authSiap, pesanAuth, setLoading } from "./common.js";
 
@@ -57,6 +57,39 @@ $("formDaftar").addEventListener("submit", async (e) => {
     setLoading(btn, false);
   }
 });
+
+//daftar / masuk dengan Google: satu tombol untuk keduanya.
+//Kalau akun Google ini baru pertama kali masuk, profil di members/{uid} dibuat dulu
+//dengan data yang ada dari Google, lalu sisanya dilengkapi di halaman akun.
+document.querySelectorAll("[data-google]").forEach((btn) => btn.addEventListener("click", async () => {
+  setLoading(btn, true, "Menunggu Google...");
+  try {
+    const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
+    const memberRef = ref(db, `members/${user.uid}`);
+    if ((await get(memberRef)).exists()) {
+      location.href = "akun.html";
+      return;
+    }
+    const nama = kapitalAwal((user.displayName || user.email.split("@")[0]).trim());
+    await set(memberRef, {
+      nama,
+      email: user.email.toLowerCase(),
+      telepon: "",
+      tanggalLahir: "",
+      kewarganegaraan: "Indonesia",
+      jenisKelamin: "",
+      nomorAnggota: "SH" + Date.now().toString().slice(-8),
+      bergabungPada: serverTimestamp()
+    });
+    location.href = "akun.html";   // halaman akun akan meminta profil dilengkapi
+  } catch (err) {
+    //popup ditutup sendiri oleh pengguna, tidak perlu pesan error
+    if (!["auth/popup-closed-by-user", "auth/cancelled-popup-request"].includes(err.code)) {
+      showAlert("alertAnggota", "danger", "Gagal masuk dengan Google: " + pesanAuth(err));
+    }
+    setLoading(btn, false);
+  }
+}));
 
 //login: Firebase Auth yang mencocokkan email dan kata sandi
 $("formMasuk").addEventListener("submit", async (e) => {

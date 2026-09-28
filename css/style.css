@@ -95,3 +95,8 @@ footer .logo { color: var(--kuning); font-size: 1.6rem; font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+/*login dengan Google*/
+.btn-google { background: #fff; color: var(--tinta); font-weight: 700; border: 2px solid var(--tinta); border-radius: 999px; }
+.btn-google:hover, .btn-google:focus { background: var(--abu); color: var(--tinta); }
+.pemisah-atau { display: flex; align-items: center; gap: .75rem; color: #777; font-weight: 600; font-size: .85rem; }
+.pemisah-atau::before, .pemisah-atau::after { content: ""; flex: 1; border-top: 1px solid var(--garis); }
